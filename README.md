@@ -1,8 +1,12 @@
-# Morpheo Chaincode
+# Morpheo Orchestrator Chaincode
+
 
 This is the Orchestrator of the Morpheo platform with the blockchain. We use the private and permissioned solution called [Hyperledger Fabric](https://hyperledger-fabric.readthedocs.io/en/release/).  
 Morpheo chaincode corresponds to the set of smart contracts, which are used to orchestrate operations on the [Morpheo platform](http://morpheo.co/). 
 It is the translation of [Morpheo Orchestrator](https://github.com/MorpheoOrg/morpheo-orchestrator) with a blockchain solution.
+
+**Licence:** CECILL 2.1 (compatible with GNU GPL)
+
 
 ## How to interact with the orchestrator
 
