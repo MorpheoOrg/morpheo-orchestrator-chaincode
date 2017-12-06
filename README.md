@@ -10,11 +10,8 @@ It is the translation of [Morpheo Orchestrator](https://github.com/MorpheoOrg/mo
 
 ## How to interact with the orchestrator
 
-Use the Morpheo-Fabric-Bootstrap to create a network and interact with the Orchestrator.  
-**TODO: add more details**
-
-<!--
-Now you can invoke invoke the smart contracts from this terminal. For instance:
+Use the [Morpheo-Fabric-Bootstrap](https://github.com/MorpheoOrg/morpheo-fabric-bootstrap) to create a network to interact with the Orchestrator.  
+Once the network is up, the chaincode is installed and instantiated, you can go inside the docker cli to interact with the Orchestrator. Below some interaction examples:  
 ```
 peer chaincode invoke -n mycc -c '{"Args":["queryItem", "algo_1"]}' -C myc
 peer chaincode invoke -n mycc -c '{"Args":["queryItems", "algo"]}' -C myc
@@ -30,9 +27,10 @@ peer chaincode invoke -n mycc -c '{"Args":["setUpletWorker", "learnuplet_0", "Ar
 // replace learnuplet_0 with correct key
 peer chaincode invoke -n mycc -c '{"Args":["reportLearn", "learnuplet_0", "done", "0.82", "data_3 0.78, data_4 0.88", "data_2 0.80"]}' -C myc
 ```
-!-->
+
 
 ## Smart contracts documentation  
+
 
 ### Elements of the ledger
 
