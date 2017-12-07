@@ -11,21 +11,21 @@ It is the translation of [Morpheo Orchestrator](https://github.com/MorpheoOrg/mo
 ## How to interact with the orchestrator
 
 Use the [Morpheo-Fabric-Bootstrap](https://github.com/MorpheoOrg/morpheo-fabric-bootstrap) to create a network to interact with the Orchestrator.  
-Once the network is up, the chaincode is installed and instantiated, you can go inside the docker cli to interact with the Orchestrator. Below some interaction examples:  
+Once the network is up, the chaincode is installed and instantiated, you can go inside the docker cli to interact with the Orchestrator. Below some interaction examples, do not forget to set the correct environment variable:  
 ```
-peer chaincode invoke -n mycc -c '{"Args":["queryItem", "algo_1"]}' -C myc
-peer chaincode invoke -n mycc -c '{"Args":["queryItems", "algo"]}' -C myc
-peer chaincode invoke -n mycc -c '{"Args":["registerProblem", "dda81bfc-b5f4-5ba2-b81a-b464248f02d2", "2", "0pa81bfc-b5f4-5ba2-b81a-b464248f02a1, 0kk81bfc-b5f4-5ba2-b81a-b464248f02e3"]}' -C myc
-peer chaincode invoke -n mycc -c '{"Args":["registerItem", "algo", "0pa81baa-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C myc
-peer chaincode invoke -n mycc -c '{"Args":["registerItem", "data", "9pa81bfc-b5f8-5ba2-b81a-b464248f02d2", "problem_1"]}' -C myc
-peer chaincode invoke -n mycc -c '{"Args":["queryProblemItems", "data", "problem_1"]}' -C myc
-peer chaincode invoke -n mycc -c '{"Args":["queryStatusLearnuplet", "todo"]}' -C myc
+peer chaincode query -n mycc -c '{"Args":["queryItem", "algo_1"]}' -C $CHANNEL_NAME
+peer chaincode query -n mycc -c '{"Args":["queryItems", "algo"]}' -C $CHANNEL_NAME
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerProblem", "dda81bfc-b5f4-5ba2-b81a-b464248f02d2", "2", "0pa81bfc-b5f4-5ba2-b81a-b464248f02a1, 0kk81bfc-b5f4-5ba2-b81a-b464248f02e3"]}' -C $CHANNEL_NAME
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "algo", "0pa81baa-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C $CHANNEL_NAME
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "data", "9pa81bfc-b5f8-5ba2-b81a-b464248f02d2", "problem_1"]}' -C $CHANNEL_NAME
+peer chaincode query -n mycc -c '{"Args":["queryProblemItems", "data", "problem_1"]}' -C $CHANNEL_NAME
+peer chaincode query -n mycc -c '{"Args":["queryStatusLearnuplet", "todo"]}' -C $CHANNEL_NAME
 // replace algo_0 with correct key
-peer chaincode invoke -n mycc -c '{"Args":["queryAlgoLearnuplet", "algo_0"]}' -C myc
+peer chaincode query -n mycc -c '{"Args":["queryAlgoLearnuplet", "algo_0"]}' -C $CHANNEL_NAME
 // replace learnuplet_0 with correct key
-peer chaincode invoke -n mycc -c '{"Args":["setUpletWorker", "learnuplet_0", "Arbeiter_12"]}' -C myc   
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["setUpletWorker", "learnuplet_0", "Arbeiter_12"]}' -C $CHANNEL_NAME   
 // replace learnuplet_0 with correct key
-peer chaincode invoke -n mycc -c '{"Args":["reportLearn", "learnuplet_0", "done", "0.82", "data_3 0.78, data_4 0.88", "data_2 0.80"]}' -C myc
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["reportLearn", "learnuplet_0", "done", "0.82", "data_3 0.78, data_4 0.88", "data_2 0.80"]}' -C $CHANNEL_NAME
 ```
 
 
@@ -96,7 +96,7 @@ Args:
 - `item_key`, such as `data_8fa81bfc-b5f4-4ba2-b81a-b464248f02d3`, `learnuplet_ca3a5a53-9684-429f-9896-4f7c94f9def0`  
 
 ```
-peer chaincode invoke -n mycc -c '{"Args":["queryItem", "learnuplet_ca3a5a53-9684-429f-9896-4f7c94f9def0"]}' -C myc
+peer chaincode query -n mycc -c '{"Args":["queryItem", "learnuplet_ca3a5a53-9684-429f-9896-4f7c94f9def0"]}' -C $CHANNEL_NAME
 ```
 
 ### + `queryItems`: to query items of a given object type
@@ -105,7 +105,7 @@ Args:
 - `object_type`, such as `data`, `learnuplet`  
 
 ```
-peer chaincode invoke -n mycc -c '{"Args":["queryItems", "learnuplet"]}' -C myc
+peer chaincode query -n mycc -c '{"Args":["queryItems", "learnuplet"]}' -C $CHANNEL_NAME
 ```
 
 ### + `queryProblemItems`: to query data or algos related to a problem
@@ -115,7 +115,7 @@ Args:
 - `problem_key`, such as `problem_8fa81bfc-b5f4-4ba2-b81a-b464248f02d3`  
 
 ```
-peer chaincode invoke -n mycc -c '{"Args":["queryProblemItems", "data", "problem_8fa81bfc-b5f4-4ba2-b81a-b464248f02d3"]}' -C myc
+peer chaincode query -n mycc -c '{"Args":["queryProblemItems", "data", "problem_8fa81bfc-b5f4-4ba2-b81a-b464248f02d3"]}' -C $CHANNEL_NAME
 ```
 
 ### + `registerItem`: to register an algo or data  
@@ -128,8 +128,8 @@ Args:
 - `problem_key`, such as `problem_2`  
 
 ```
-peer chaincode invoke -n mycc -c '{"Args":["registerItem", "algo", "https://storage.morpheo.io/algo/0pa81bfc-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C myc
-peer chaincode invoke -n mycc -c '{"Args":["registerItem", "data", "https://storage.morpheo.io/data/9pa81bfc-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C myc
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "algo", "https://storage.morpheo.io/algo/0pa81bfc-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C $CHANNEL_NAME
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "data", "https://storage.morpheo.io/data/9pa81bfc-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C $CHANNEL_NAME
 ```
 
 ### + `registerProblem`: to register a new problem
@@ -141,7 +141,7 @@ Args:
 
 
 ```
-peer chaincode invoke -n mycc -c '{"Args":["registerProblem", "https://storage.morpheo.io/problem/dda81bfc-b5f4-5ba2-b81a-b464248f02d2", "2", "https://storage.morpheo.io/data/0pa81bfc-b5f4-5ba2-b81a-b464248f02a1, https://storage.morpheo.io/data/0pa81bfc-b5f4-5ba2-b81a-b464248f02e3"]}' -C myc
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerProblem", "https://storage.morpheo.io/problem/dda81bfc-b5f4-5ba2-b81a-b464248f02d2", "2", "https://storage.morpheo.io/data/0pa81bfc-b5f4-5ba2-b81a-b464248f02a1, https://storage.morpheo.io/data/0pa81bfc-b5f4-5ba2-b81a-b464248f02e3"]}' -C $CHANNEL_NAME
 ```
 
 
@@ -151,7 +151,7 @@ Args:
 - `status`: `todo`, `pending`, `failed`, or `done`
 
 ```
-peer chaincode invoke -n mycc -c '{"Args":["queryStatusLearnuplet", "todo"]}' -C myc
+peer chaincode query -n mycc -c '{"Args":["queryStatusLearnuplet", "todo"]}' -C $CHANNEL_NAME
 ```
 
 ### + `queryAlgoLearnuplet`: to query all learnuplets associated to a given algo
@@ -160,7 +160,7 @@ Args:
 - `algo_key`: algo key of the algo of interest 
 
 ```
-peer chaincode invoke -n mycc -c '{"Args":["queryAlgoLearnuplet", "algo_f50844e0-90e7-4fb8-a2aa-3d7e49204584"]}' -C myc
+peer chaincode query -n mycc -c '{"Args":["queryAlgoLearnuplet", "algo_f50844e0-90e7-4fb8-a2aa-3d7e49204584"]}' -C $CHANNEL_NAME
 ```
 
 ### + `setUpletWorker`: to set the worker and change the status of a learnuplet  
@@ -170,7 +170,7 @@ Args:
 - `worker`: worker identifier... to be defined
 
 ```
-peer chaincode invoke -n mycc -c '{"Args":["setUpletWorker", "learnuplet_f50844e0-90e7-4fb8-a2aa-3d7e49204584", "Arbeiter_12"]}' -C myc
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["setUpletWorker", "learnuplet_f50844e0-90e7-4fb8-a2aa-3d7e49204584", "Arbeiter_12"]}' -C $CHANNEL_NAME
 ```
 
 ### + `reportLearn`: to report the output of a learning task
@@ -183,7 +183,7 @@ Args:
 - `test_perf`: performances on each test data, such as `data_2 0.82, data_4 0.94, data_6 0.88`  
 
 ```
-peer chaincode invoke -n mycc -c '{"Args":["reportLearn", "learnuplet_f50844e0-90e7-4fb8-a2aa-3d7e49204584", "done", "0.82", "data_3 0.78, data_4 0.88", "data_2 0.80"]}' -C myc
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["reportLearn", "learnuplet_f50844e0-90e7-4fb8-a2aa-3d7e49204584", "done", "0.82", "data_3 0.78, data_4 0.88", "data_2 0.80"]}' -C $CHANNEL_NAME
 ```
 
 
