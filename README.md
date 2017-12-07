@@ -1,6 +1,5 @@
 # Morpheo Orchestrator Chaincode
 
-
 This is the Orchestrator of the Morpheo platform with the blockchain. We use the private and permissioned solution called [Hyperledger Fabric](https://hyperledger-fabric.readthedocs.io/en/release/).  
 Morpheo chaincode corresponds to the set of smart contracts, which are used to orchestrate operations on the [Morpheo platform](http://morpheo.co/). 
 It is the translation of [Morpheo Orchestrator](https://github.com/MorpheoOrg/morpheo-orchestrator) with a blockchain solution.
@@ -128,8 +127,9 @@ Args:
 - `problem_key`, such as `problem_2`  
 
 ```
-peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "algo", "https://storage.morpheo.io/algo/0pa81bfc-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C $CHANNEL_NAME
-peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "data", "https://storage.morpheo.io/data/9pa81bfc-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C $CHANNEL_NAME
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", 
+"algo", "0pa81bfc-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C $CHANNEL_NAME
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "data", "9pa81bfc-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C $CHANNEL_NAME
 ```
 
 ### + `registerProblem`: to register a new problem
@@ -141,7 +141,7 @@ Args:
 
 
 ```
-peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerProblem", "https://storage.morpheo.io/problem/dda81bfc-b5f4-5ba2-b81a-b464248f02d2", "2", "https://storage.morpheo.io/data/0pa81bfc-b5f4-5ba2-b81a-b464248f02a1, https://storage.morpheo.io/data/0pa81bfc-b5f4-5ba2-b81a-b464248f02e3"]}' -C $CHANNEL_NAME
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerProblem", "dda81bfc-b5f4-5ba2-b81a-b464248f02d2", "2", "0pa81bfc-b5f4-5ba2-b81a-b464248f02a1, 0pa81bfc-b5f4-5ba2-b81a-b464248f02e3"]}' -C $CHANNEL_NAME
 ```
 
 
@@ -185,6 +185,7 @@ Args:
 ```
 peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["reportLearn", "learnuplet_f50844e0-90e7-4fb8-a2aa-3d7e49204584", "done", "0.82", "data_3 0.78, data_4 0.88", "data_2 0.80"]}' -C $CHANNEL_NAME
 ```
+
 
 
 ## TODO
