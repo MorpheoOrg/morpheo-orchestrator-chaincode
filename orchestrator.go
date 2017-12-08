@@ -39,6 +39,7 @@ package main
  * 2 specific Hyperledger Fabric specific libraries for Smart Contracts
  */
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -89,6 +90,9 @@ type Learnuplet struct {
 
 /*
  * The Init method is called when the Smart Contract orchestrator is instantiated by the blockchain network
+ * Note that chaincode upgrade also calls this function to reset
+ * or to migrate data, so be careful to avoid a scenario where you
+ * inadvertently clobber your ledger's data!
  * Best practice is to have any Ledger initialization in separate function -- see initLedger()
  */
 func (s *SmartContract) Init(APIstub shim.ChaincodeStubInterface) sc.Response {
@@ -355,11 +359,7 @@ func (s *SmartContract) queryItem(APIstub shim.ChaincodeStubInterface, args []st
 
 	key := args[0]
 	fmt.Println("- start looking for element with key ", key)
-	itemAsBytes, err := APIstub.GetState(key)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	payload, err := json.Marshal(string(itemAsBytes))
+	payload, err := APIstub.GetState(key)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -380,20 +380,21 @@ func (s *SmartContract) queryItems(APIstub shim.ChaincodeStubInterface, args []s
 	objectType := args[0]
 	fmt.Printf("- start looking for elements of type %s\n", objectType)
 	resultsIterator, _ := APIstub.GetStateByRange(objectType+"_", objectType+"_z")
-	fmt.Println(resultsIterator)
-	results := make([]string, 0)
+	var payloadSlice [][]byte
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
 			return shim.Error(err.Error())
 		}
-		results = append(results, queryResponse.String())
-	}
-	payload, err := json.Marshal(results)
-	if err != nil {
-		return shim.Error(err.Error())
+		payloadSlice = append(payloadSlice, queryResponse.GetValue())
 	}
 	fmt.Printf("- end looking for elements of type %s\n", objectType)
+
+	// Formatting in json
+	payload := append([]byte("["), bytes.Join(payloadSlice, []byte(","))...)
+	payload = append(payload, "]"...)
+
+	//return
 	return shim.Success(payload)
 }
 
