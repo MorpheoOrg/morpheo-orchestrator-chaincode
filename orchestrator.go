@@ -39,7 +39,6 @@ package main
  * 2 specific Hyperledger Fabric specific libraries for Smart Contracts
  */
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -380,19 +379,28 @@ func (s *SmartContract) queryItems(APIstub shim.ChaincodeStubInterface, args []s
 	objectType := args[0]
 	fmt.Printf("- start looking for elements of type %s\n", objectType)
 	resultsIterator, _ := APIstub.GetStateByRange(objectType+"_", objectType+"_z")
-	var payloadSlice [][]byte
+	var payloadMap []map[string]interface{}
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
 			return shim.Error(err.Error())
 		}
-		payloadSlice = append(payloadSlice, queryResponse.GetValue())
+		var value map[string]interface{}
+		err = json.Unmarshal(queryResponse.GetValue(), &value)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		payloadMap = append(payloadMap, map[string]interface{}{
+			"key":   queryResponse.GetKey(),
+			"value": value,
+		})
 	}
 	fmt.Printf("- end looking for elements of type %s\n", objectType)
 
-	// Formatting in json
-	payload := append([]byte("["), bytes.Join(payloadSlice, []byte(","))...)
-	payload = append(payload, "]"...)
+	payload, err := json.Marshal(payloadMap)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
 	//return
 	return shim.Success(payload)
