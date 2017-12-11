@@ -230,7 +230,7 @@ func (s *SmartContract) registerProblem(APIstub shim.ChaincodeStubInterface, arg
 	testDataAddress := strings.Split(args[2], ",")
 
 	// Create Problem Key
-	problemKey := "problem_" + uuid.NewV4().String()
+	problemKey := "problem_" + args[0]
 
 	// Store test data
 	err, testData := registerTestData(APIstub, problemKey, testDataAddress)
@@ -317,7 +317,7 @@ func (s *SmartContract) registerItem(APIstub shim.ChaincodeStubInterface, args [
 	// ---------------------------------------------------------------
 
 	if len(args) != 3 {
-		return shim.Error("Incorrect number of arguments. Expecting 4: itemType, storage_address, problem")
+		return shim.Error("Incorrect number of arguments. Expecting 3: itemType, storage_address, problem")
 	}
 	//   0          	1   		 	2
 	// "itemType", "storage_address", "problem"
