@@ -89,6 +89,9 @@ type Learnuplet struct {
 
 /*
  * The Init method is called when the Smart Contract orchestrator is instantiated by the blockchain network
+ * Note that chaincode upgrade also calls this function to reset
+ * or to migrate data, so be careful to avoid a scenario where you
+ * inadvertently clobber your ledger's data!
  * Best practice is to have any Ledger initialization in separate function -- see initLedger()
  */
 func (s *SmartContract) Init(APIstub shim.ChaincodeStubInterface) sc.Response {
@@ -227,7 +230,7 @@ func (s *SmartContract) registerProblem(APIstub shim.ChaincodeStubInterface, arg
 	testDataAddress := strings.Split(args[2], ",")
 
 	// Create Problem Key
-	problemKey := "problem_" + uuid.NewV4().String()
+	problemKey := "problem_" + args[0]
 
 	// Store test data
 	err, testData := registerTestData(APIstub, problemKey, testDataAddress)
@@ -314,7 +317,7 @@ func (s *SmartContract) registerItem(APIstub shim.ChaincodeStubInterface, args [
 	// ---------------------------------------------------------------
 
 	if len(args) != 3 {
-		return shim.Error("Incorrect number of arguments. Expecting 4: itemType, storage_address, problem")
+		return shim.Error("Incorrect number of arguments. Expecting 3: itemType, storage_address, problem")
 	}
 	//   0          	1   		 	2
 	// "itemType", "storage_address", "problem"
@@ -355,11 +358,7 @@ func (s *SmartContract) queryItem(APIstub shim.ChaincodeStubInterface, args []st
 
 	key := args[0]
 	fmt.Println("- start looking for element with key ", key)
-	itemAsBytes, err := APIstub.GetState(key)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	payload, err := json.Marshal(string(itemAsBytes))
+	payload, err := APIstub.GetState(key)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -380,20 +379,28 @@ func (s *SmartContract) queryItems(APIstub shim.ChaincodeStubInterface, args []s
 	objectType := args[0]
 	fmt.Printf("- start looking for elements of type %s\n", objectType)
 	resultsIterator, _ := APIstub.GetStateByRange(objectType+"_", objectType+"_z")
-	fmt.Println(resultsIterator)
-	results := make([]string, 0)
+	var items []map[string]interface{}
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
 			return shim.Error(err.Error())
 		}
-		results = append(results, queryResponse.String())
+		var item map[string]interface{}
+		err = json.Unmarshal(queryResponse.GetValue(), &item)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		item["key"] = queryResponse.GetKey()
+		items = append(items, item)
 	}
-	payload, err := json.Marshal(results)
+	fmt.Printf("- end looking for elements of type %s\n", objectType)
+
+	payload, err := json.Marshal(items)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	fmt.Printf("- end looking for elements of type %s\n", objectType)
+
+	//return
 	return shim.Success(payload)
 }
 
@@ -480,7 +487,7 @@ func (s *SmartContract) queryProblemItems(APIstub shim.ChaincodeStubInterface, a
 // =============================================================
 
 func getCompositeLearnuplet(APIstub shim.ChaincodeStubInterface, keyRequest string,
-	keyValue string) (learnuplets map[string]string, err error) {
+	keyValue string) ([]byte, error) {
 	// To get all learnuplet having a given status (keyRequest: status, keyValue: todo, ...)
 	// or being linked with a given algo (keyRequest: algo, keyValue: algoKey)
 
@@ -488,30 +495,39 @@ func getCompositeLearnuplet(APIstub shim.ChaincodeStubInterface, keyRequest stri
 	// Query the learnuplet~<compositeKey>~key index by <compositeKey>
 	learnupletIterator, err := APIstub.GetStateByPartialCompositeKey(compositeKeyIndex, []string{"learnuplet", keyValue})
 	if err != nil {
-		return learnuplets, err
+		return nil, err
 	}
 	defer learnupletIterator.Close()
 
-	learnuplets = make(map[string]string)
+	var learnuplets []map[string]interface{}
 	// Iterate through result set
 	for i := 0; learnupletIterator.HasNext(); i++ {
 		responseRange, err := learnupletIterator.Next()
 		if err != nil {
-			return learnuplets, err
+			return nil, err
 		}
 
 		// get the ObjectType, status, and key from the composite key
 		_, compositeKeyParts, err := APIstub.SplitCompositeKey(responseRange.Key)
 		if err != nil {
-			return learnuplets, err
+			return nil, err
 		}
 		returnedKey := compositeKeyParts[2]
 		value, _ := APIstub.GetState(returnedKey)
-
-		learnuplets[returnedKey] = string(value)
+		var learnuplet map[string]interface{}
+		err = json.Unmarshal(value, &learnuplet)
+		if err != nil {
+			return nil, err
+		}
+		learnuplet["key"] = returnedKey
+		learnuplets = append(learnuplets, learnuplet)
 	}
 
-	return learnuplets, err
+	payload, err := json.Marshal(learnuplets)
+	if err != nil {
+		return nil, err
+	}
+	return payload, nil
 }
 
 func (s *SmartContract) queryStatusLearnuplet(APIstub shim.ChaincodeStubInterface,
@@ -526,17 +542,14 @@ func (s *SmartContract) queryStatusLearnuplet(APIstub shim.ChaincodeStubInterfac
 	status := args[0]
 	fmt.Println("- start looking for learnuplet with status ", status)
 
-	learnuplets, err := getCompositeLearnuplet(APIstub, "status", status)
+	payload, err := getCompositeLearnuplet(APIstub, "status", status)
 	if err != nil {
 		return shim.Error("Problem querying learnuplet depending on status " +
 			status + " - " + err.Error())
 	}
-	learnupletsAsJson, err := json.Marshal(learnuplets)
-	if err != nil {
-		return shim.Error("Problem marshalling learnuplets - " + err.Error())
-	}
 	fmt.Println("- end looking for learnuplet with status ", status)
-	return shim.Success(learnupletsAsJson)
+
+	return shim.Success(payload)
 }
 
 func (s *SmartContract) queryAlgoLearnuplet(APIstub shim.ChaincodeStubInterface,
@@ -551,17 +564,13 @@ func (s *SmartContract) queryAlgoLearnuplet(APIstub shim.ChaincodeStubInterface,
 	algo := args[0]
 	fmt.Println("- start looking for learnuplet of algo ", algo)
 
-	learnuplets, err := getCompositeLearnuplet(APIstub, "algo", algo)
+	payload, err := getCompositeLearnuplet(APIstub, "algo", algo)
 	if err != nil {
 		return shim.Error("Problem querying learnuplet associated with algo " +
 			algo + " - " + err.Error())
 	}
-	learnupletsAsJson, err := json.Marshal(learnuplets)
-	if err != nil {
-		return shim.Error("Problem marshalling learnuplets - " + err.Error())
-	}
 	fmt.Println("- end looking for learnuplet of algo ", algo)
-	return shim.Success(learnupletsAsJson)
+	return shim.Success(payload)
 }
 
 // ====================================================================
