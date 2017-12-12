@@ -27,6 +27,9 @@ peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA
 peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["reportLearn", "learnuplet_0", "done", "0.82", "data_3 0.78, data_4 0.88", "data_2 0.80"]}' -C $CHANNEL_NAME
 ```
 
+## Chaincode-docker-devmode  
+
+You can use the `chaincode-docker-devmode` to more easily develop the chaincode, [as detailed here](./chaincode-docker-devmode/README.md)
 
 ## Smart contracts documentation  
 

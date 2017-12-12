@@ -11,4 +11,4 @@
 *.out
 
 # Build
-morpheo-orchestrator-chaincode
+chaincode
