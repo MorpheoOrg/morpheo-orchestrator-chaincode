@@ -440,8 +440,7 @@ func getProblemItems(APIstub shim.ChaincodeStubInterface, problem string, itemTy
 		fmt.Printf("--- found %s associated with %s \n", returnedKey, returnedProblem)
 
 		// Put item key in slice
-		newAddress := strings.TrimPrefix(returnedKey, itemType+"_")
-		itemAddresses = append(itemAddresses, newAddress)
+		itemAddresses = append(itemAddresses, returnedKey)
 	}
 
 	return itemAddresses
@@ -463,7 +462,7 @@ func (s *SmartContract) queryProblemItems(APIstub shim.ChaincodeStubInterface, a
 	itemKeys := getProblemItems(APIstub, problem, itemType)
 
 	// Iterate through result set
-	results := make(map[string]string)
+	results := make(map[string]interface{})
 	for _, key := range itemKeys {
 
 		// Get algo given its key
@@ -471,7 +470,9 @@ func (s *SmartContract) queryProblemItems(APIstub shim.ChaincodeStubInterface, a
 		if err != nil {
 			return shim.Error(err.Error())
 		}
-		results[key] = string(value)
+		var ivalue interface{}
+		err = json.Unmarshal(value, &ivalue)
+		results[key] = ivalue
 	}
 	payload, err := json.Marshal(results)
 	if err != nil {
@@ -482,9 +483,9 @@ func (s *SmartContract) queryProblemItems(APIstub shim.ChaincodeStubInterface, a
 	return shim.Success(payload)
 }
 
-// =============================================================
-// query learnuplet ith specific composite keys (status or algo)
-// =============================================================
+// ==============================================================
+// query learnuplet with specific composite keys (status or algo)
+// ==============================================================
 
 func getCompositeLearnuplet(APIstub shim.ChaincodeStubInterface, keyRequest string,
 	keyValue string) ([]byte, error) {
@@ -778,7 +779,7 @@ func dataLearnuplet(APIstub shim.ChaincodeStubInterface, data []string, problem 
 		rank, modelAddress = getRankAlgoLearnuplet(APIstub, algoKey)
 		nbAlgoNewLearnuplet := createLearnuplet(
 			APIstub, data, sizeTrainDataset, testData, problem, problemAddress,
-			algoKey, modelAddress, rank)
+			algoKey, modelAddress, rank+1)
 		nbNewLearnuplet = nbNewLearnuplet + nbAlgoNewLearnuplet
 	}
 	return nbNewLearnuplet
