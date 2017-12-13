@@ -227,7 +227,7 @@ func (s *SmartContract) registerProblem(APIstub shim.ChaincodeStubInterface, arg
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	testDataAddress := strings.Split(args[2], ",")
+	testDataAddress := strings.Split(strings.Replace(args[2], " ", "", -1), ",")
 
 	// Create Problem Key
 	problemKey := "problem_" + args[0]
@@ -236,6 +236,9 @@ func (s *SmartContract) registerProblem(APIstub shim.ChaincodeStubInterface, arg
 	err, testData := registerTestData(APIstub, problemKey, testDataAddress)
 	if err != nil {
 		return shim.Error(err.Error())
+	}
+	for i := 0; i < len(testData); i++ {
+		testData[i] = "data_" + testData[i]
 	}
 
 	// Store Problem
@@ -742,9 +745,10 @@ func algoLearnuplet(APIstub shim.ChaincodeStubInterface, algoKey string, algo It
 	}
 	sort.Strings(trainData)
 	// Create learnuplets
+	modelStart := strings.TrimLeft(algoKey, "algo_")
 	nbNewLearnuplet := createLearnuplet(
 		APIstub, trainData, sizeTrainDataset, testData, problem, problemAddress,
-		algoKey, algoKey, 0)
+		algoKey, modelStart, 0)
 	return nbNewLearnuplet
 }
 
