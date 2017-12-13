@@ -12,3 +12,6 @@
 
 # Build
 chaincode
+
+# Fabric
+chaincode-docker-devmode/myc.block
