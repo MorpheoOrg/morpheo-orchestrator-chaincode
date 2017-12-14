@@ -491,7 +491,7 @@ func (s *SmartContract) queryProblemItems(APIstub shim.ChaincodeStubInterface, a
 // ==============================================================
 
 func getCompositeLearnuplet(APIstub shim.ChaincodeStubInterface, keyRequest string,
-	keyValue string) ([]byte, error) {
+	keyValue string) ([]byte, []map[string]interface{}, error) {
 	// To get all learnuplet having a given status (keyRequest: status, keyValue: todo, ...)
 	// or being linked with a given algo (keyRequest: algo, keyValue: algoKey)
 
@@ -499,7 +499,7 @@ func getCompositeLearnuplet(APIstub shim.ChaincodeStubInterface, keyRequest stri
 	// Query the learnuplet~<compositeKey>~key index by <compositeKey>
 	learnupletIterator, err := APIstub.GetStateByPartialCompositeKey(compositeKeyIndex, []string{"learnuplet", keyValue})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer learnupletIterator.Close()
 
@@ -508,20 +508,20 @@ func getCompositeLearnuplet(APIstub shim.ChaincodeStubInterface, keyRequest stri
 	for i := 0; learnupletIterator.HasNext(); i++ {
 		responseRange, err := learnupletIterator.Next()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		// get the ObjectType, status, and key from the composite key
 		_, compositeKeyParts, err := APIstub.SplitCompositeKey(responseRange.Key)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		returnedKey := compositeKeyParts[2]
 		value, _ := APIstub.GetState(returnedKey)
 		var learnuplet map[string]interface{}
 		err = json.Unmarshal(value, &learnuplet)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		learnuplet["key"] = returnedKey
 		learnuplets = append(learnuplets, learnuplet)
@@ -529,9 +529,9 @@ func getCompositeLearnuplet(APIstub shim.ChaincodeStubInterface, keyRequest stri
 
 	payload, err := json.Marshal(learnuplets)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return payload, nil
+	return payload, learnuplets, nil
 }
 
 func (s *SmartContract) queryStatusLearnuplet(APIstub shim.ChaincodeStubInterface,
@@ -546,7 +546,7 @@ func (s *SmartContract) queryStatusLearnuplet(APIstub shim.ChaincodeStubInterfac
 	status := args[0]
 	fmt.Println("- start looking for learnuplet with status ", status)
 
-	payload, err := getCompositeLearnuplet(APIstub, "status", status)
+	payload, _, err := getCompositeLearnuplet(APIstub, "status", status)
 	if err != nil {
 		return shim.Error("Problem querying learnuplet depending on status " +
 			status + " - " + err.Error())
@@ -568,7 +568,7 @@ func (s *SmartContract) queryAlgoLearnuplet(APIstub shim.ChaincodeStubInterface,
 	algo := args[0]
 	fmt.Println("- start looking for learnuplet of algo ", algo)
 
-	payload, err := getCompositeLearnuplet(APIstub, "algo", algo)
+	payload, _, err := getCompositeLearnuplet(APIstub, "algo", algo)
 	if err != nil {
 		return shim.Error("Problem querying learnuplet associated with algo " +
 			algo + " - " + err.Error())
@@ -848,11 +848,11 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 	// For now, this is a simple function, much more checks will be applied later...
 	// -----------------------------------------------------------------------------
 
-	if len(args) != 5 {
+	if len(args) != 6 {
 		return shim.Error("Incorrect number of arguments. Expecting 5: uplet_key, status (failed / done), perf, train_perf (train_data_i perf_i, train_data_j perf_j, ...), test_perf (test_data_i perf_j, test_data_j perf_j, ...)")
 	}
-	//     0  		   1		  2 		3			4
-	// "uplet_key", "status", "perf", "train_perf", "test_perf"
+	//     0  		   1		  2 		3			4			5
+	// "uplet_key", "status", "perf", "train_perf", "test_perf", "model_end"
 
 	// TODO: Check args validity (especially uplet_key and status validity)
 
@@ -867,8 +867,9 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 		return shim.Error(fmt.Sprintf("Error Unmarshal uplet %s - %s", upletKey, err))
 	}
 
-	// Update learnuplet status
+	// Update learnuplet status and model end value
 	retrievedLearnuplet.Status = args[1]
+	retrievedLearnuplet.ModelEnd = args[5]
 
 	// Deal with the status "failed" case
 	if retrievedLearnuplet.Status == "failed" {
@@ -936,6 +937,43 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 	learnupletStatusIndexKey, _ := APIstub.CreateCompositeKey(indexName, []string{"learnuplet", "done", upletKey})
 	APIstub.PutState(learnupletStatusIndexKey, emptyValue)
 
+	// Update model start of learnuplet of next rank
+	_, algoLearnuplet, err := getCompositeLearnuplet(APIstub, "algo", retrievedLearnuplet.Algo)
+	if err != nil {
+		return shim.Error("Problem getting learnuplets of same algo - " + err.Error())
+	}
+	if len(algoLearnuplet) > 1 {
+		var nextLearnupletKey string
+		bestPerf := perf
+		newModelStart := retrievedLearnuplet.ModelEnd
+		for _, learnuplet := range algoLearnuplet {
+			if learnuplet["rank"].(int) == retrievedLearnuplet.Rank+1 {
+				nextLearnupletKey = learnuplet["key"].(string)
+			}
+			if learnuplet["perf"].(float64) > bestPerf && learnuplet["status"].(string) == "done" {
+				newModelStart = learnuplet["modelEnd"].(string)
+				bestPerf = learnuplet["perf"].(float64)
+			}
+		}
+		value, _ := APIstub.GetState(nextLearnupletKey)
+		nextUplet := Learnuplet{}
+		err := json.Unmarshal(value, &nextUplet)
+		if err != nil {
+			return shim.Error(fmt.Sprintf("Error Unmarshal next uplet - %s", err))
+		}
+		nextUplet.ModelStart = newModelStart
+
+		// Store updated learnuplet
+		nextUpletAsBytes, err := json.Marshal(nextUplet)
+		if err != nil {
+			return shim.Error("Problem (re)marshaling next learnuplet - " + err.Error())
+		}
+		err = APIstub.PutState(nextLearnupletKey, nextUpletAsBytes)
+		if err != nil {
+			return shim.Error("Problem storing next learnuplet - " + err.Error())
+		}
+
+	}
 	fmt.Printf("- end Report learning phase of %s \n", upletKey)
 	return shim.Success(nil)
 }
