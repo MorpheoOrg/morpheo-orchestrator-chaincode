@@ -894,24 +894,22 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 		return shim.Success(nil)
 	}
 
-	// Process perf data
+	// Unmarhall perf data
 	var perf float64
 	var trainPerf, testPerf map[string]float64
-	trainPerf = make(map[string]float64)
-	testPerf = make(map[string]float64)
 	if args[2] != "" {
 		perf, err = strconv.ParseFloat(args[2], 64)
 		if err != nil {
-			return shim.Error("Problem parsing performance - " + err.Error())
+			return shim.Error("Error parsing performance - " + err.Error())
 		}
 		// TODO check data addresses correspond to train and test data
-		err, trainPerf = mapPerf(args[3])
+		err = json.Unmarshal([]byte(args[3]), &trainPerf)
 		if err != nil {
-			return shim.Error("Problem parsing train perf - " + err.Error())
+			return shim.Error("Error un-marshalling train perf - " + err.Error())
 		}
-		err, testPerf = mapPerf(args[4])
+		err = json.Unmarshal([]byte(args[4]), &testPerf)
 		if err != nil {
-			return shim.Error("Problem parsing test perf - " + err.Error())
+			return shim.Error("Error un-marshalling test perf - " + err.Error())
 		}
 	}
 
@@ -976,26 +974,6 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 	}
 	fmt.Printf("- end Report learning phase of %s \n", upletKey)
 	return shim.Success(nil)
-}
-
-func mapPerf(perf string) (err error, mapPerf map[string]float64) {
-	// Convert string with perf ("dataKey_i perf_i, dataKey_j perf_j, ...") to map
-	var keyPerf []string
-	var p float64
-	mapPerf = make(map[string]float64)
-	slicePerf := strings.Split(perf, ",")
-	for _, sperf := range slicePerf {
-		// remove leading and trailing space and split key and perf
-		sperf = strings.TrimSpace(sperf)
-		keyPerf = strings.Split(sperf, " ")
-		// store in map
-		p, err = strconv.ParseFloat(keyPerf[1], 64)
-		if err != nil {
-			return err, mapPerf
-		}
-		mapPerf[keyPerf[0]] = p
-	}
-	return err, mapPerf
 }
 
 // ==============================================
