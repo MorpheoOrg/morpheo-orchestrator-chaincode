@@ -24,7 +24,7 @@ peer chaincode query -n mycc -c '{"Args":["queryAlgoLearnuplet", "algo_0"]}' -C 
 // replace learnuplet_0 with correct key
 peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["setUpletWorker", "learnuplet_0", "Arbeiter_12"]}' -C $CHANNEL_NAME   
 // replace learnuplet_0 with correct key
-peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["reportLearn", "learnuplet_0", "done", "0.82", "data_3 0.78, data_4 0.88", "data_2 0.80", "modelEnd_storageAddress"]}' -C $CHANNEL_NAME
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["reportLearn", "learnuplet_0", "done", "0.82", "data_3 0.78, data_4 0.88", "data_2 0.80"]}' -C $CHANNEL_NAME
 ```
 
 ## Chaincode-docker-devmode  
@@ -184,9 +184,8 @@ Args:
 - `perf`: performance of the model (performance on test data), such as `0.99`        
 - `train_perf`: performances on each train data, such as `data_12 0.89, data_22 0.92, data_34 0.88, data_44 0.96`  
 - `test_perf`: performances on each test data, such as `data_2 0.82, data_4 0.94, data_6 0.88`  
-- `model_end`: storage address of the learnt model, such as `g82842f0-90e7-4fb8-a2aa-3d7e49204584`  
 ```
-peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["reportLearn", "learnuplet_f50844e0-90e7-4fb8-a2aa-3d7e49204584", "done", "0.82", "data_3 0.78, data_4 0.88", "data_2 0.80", "g82842f0-90e7-4fb8-a2aa-3d7e49204584"]}' -C $CHANNEL_NAME
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["reportLearn", "learnuplet_f50844e0-90e7-4fb8-a2aa-3d7e49204584", "done", "0.82", "data_3 0.78, data_4 0.88", "data_2 0.80"]}' -C $CHANNEL_NAME
 ```
 
 

@@ -660,7 +660,8 @@ func createLearnuplet(
 		}
 		j = j + startRank
 		// if not first rank, modelStart is empty, will be filled once first rank has been computed
-		// ModelEnd will be sent by compute when it sends status and performances
+		// Generation of ModelEnd
+		modelEnd := uuid.NewV4().String()
 		learnupletModelStart := ""
 		if j == startRank {
 			learnupletModelStart = modelStart
@@ -671,7 +672,7 @@ func createLearnuplet(
 			ProblemAddress: problemAddress,
 			Algo:           algo,
 			ModelStart:     learnupletModelStart,
-			ModelEnd:       "",
+			ModelEnd:       modelEnd,
 			TrainData:      batchData,
 			TestData:       testData,
 			Worker:         "",
@@ -848,11 +849,11 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 	// For now, this is a simple function, much more checks will be applied later...
 	// -----------------------------------------------------------------------------
 
-	if len(args) != 6 {
+	if len(args) != 5 {
 		return shim.Error("Incorrect number of arguments. Expecting 5: uplet_key, status (failed / done), perf, train_perf (train_data_i perf_i, train_data_j perf_j, ...), test_perf (test_data_i perf_j, test_data_j perf_j, ...)")
 	}
-	//     0  		   1		  2 		3			4			5
-	// "uplet_key", "status", "perf", "train_perf", "test_perf", "model_end"
+	//     0  		   1		  2 		3			4
+	// "uplet_key", "status", "perf", "train_perf", "test_perf"
 
 	// TODO: Check args validity (especially uplet_key and status validity)
 
@@ -869,7 +870,6 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 
 	// Update learnuplet status and model end value
 	retrievedLearnuplet.Status = args[1]
-	retrievedLearnuplet.ModelEnd = args[5]
 
 	// Deal with the status "failed" case
 	if retrievedLearnuplet.Status == "failed" {
