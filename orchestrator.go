@@ -41,6 +41,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -848,7 +849,6 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 	// Set output of a learnuplet, updateing the corresponding learnuplet
 	// For now, this is a simple function, much more checks will be applied later...
 	// -----------------------------------------------------------------------------
-
 	if len(args) != 5 {
 		return shim.Error("Incorrect number of arguments. Expecting 5: uplet_key, status (failed / done), perf, train_perf (train_data_i perf_i, train_data_j perf_j, ...), test_perf (test_data_i perf_j, test_data_j perf_j, ...)")
 	}
@@ -859,7 +859,6 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 
 	upletKey := args[0]
 	fmt.Printf("- start Report learning phase of %s \n", upletKey)
-
 	// Get learnuplet
 	value, _ := APIstub.GetState(upletKey)
 	retrievedLearnuplet := Learnuplet{}
@@ -927,6 +926,7 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 	if err != nil {
 		return shim.Error("Problem storing learnuplet - " + err.Error())
 	}
+
 	// Update associated composite key learnuplet~status~key
 	indexName := "learnuplet~status~key"
 	emptyValue := []byte{0x00}
@@ -945,12 +945,20 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 		bestPerf := perf
 		newModelStart := retrievedLearnuplet.ModelEnd
 		for _, learnuplet := range algoLearnuplet {
-			if learnuplet["rank"].(int) == retrievedLearnuplet.Rank+1 {
-				nextLearnupletKey = learnuplet["key"].(string)
+			// Type conversion
+			// TOFIX: bad practice here
+			rank, _ := learnuplet["rank"].(float64)
+			key, _ := learnuplet["key"].(string)
+			perf, _ := learnuplet["perf"].(float64)
+			status, _ := learnuplet["status"].(string)
+			modelEnd, _ := learnuplet["modelEnd"].(string)
+
+			if int(rank) == retrievedLearnuplet.Rank+1 {
+				nextLearnupletKey = key
 			}
-			if learnuplet["perf"].(float64) > bestPerf && learnuplet["status"].(string) == "done" {
-				newModelStart = learnuplet["modelEnd"].(string)
-				bestPerf = learnuplet["perf"].(float64)
+			if perf > bestPerf && status == "done" {
+				newModelStart = modelEnd
+				bestPerf = perf
 			}
 		}
 		value, _ := APIstub.GetState(nextLearnupletKey)
