@@ -15,8 +15,8 @@ Once the network is up, the chaincode is installed and instantiated, you can go 
 peer chaincode query -n mycc -c '{"Args":["queryItem", "algo_1"]}' -C $CHANNEL_NAME
 peer chaincode query -n mycc -c '{"Args":["queryItems", "algo"]}' -C $CHANNEL_NAME
 peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerProblem", "dda81bfc-b5f4-5ba2-b81a-b464248f02d2", "2", "0pa81bfc-b5f4-5ba2-b81a-b464248f02a1, 0kk81bfc-b5f4-5ba2-b81a-b464248f02e3"]}' -C $CHANNEL_NAME
-peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "algo", "0pa81baa-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C $CHANNEL_NAME
-peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "data", "9pa81bfc-b5f8-5ba2-b81a-b464248f02d2", "problem_1"]}' -C $CHANNEL_NAME
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "algo", "0pa81baa-b5f4-5ba2-b81a-b464248f02d2", "problem_1", "mytopalgo"]}' -C $CHANNEL_NAME
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "data", "9pa81bfc-b5f8-5ba2-b81a-b464248f02d2", "problem_1", "psg"]}' -C $CHANNEL_NAME
 peer chaincode query -n mycc -c '{"Args":["queryProblemItems", "data", "problem_1"]}' -C $CHANNEL_NAME
 peer chaincode query -n mycc -c '{"Args":["queryStatusLearnuplet", "todo"]}' -C $CHANNEL_NAME
 // replace algo_0 with correct key
@@ -48,6 +48,7 @@ Data and algo are 2 ObjectTypes, which both derive from an Item structure:
 type Item struct {
     ObjectType     string `json:"docType"`
     Problem        string `json:"problem"`
+    Name           string `json:"name"`
 }
 ```
 Keys: `data_<uuid>` and `algo_<uuid>`.   
@@ -128,11 +129,12 @@ Args:
 - `item_type`: `data` or `algo`  
 - `storage_address`, such as `https://storage.morpheo.io/algo/0pa81bfc-b5f4-5ba2-b81a-b464248f02d2`    
 - `problem_key`, such as `problem_2`  
+- `item_name`, such as `mysuperalgo`  
 
 ```
 peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", 
-"algo", "0pa81bfc-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C $CHANNEL_NAME
-peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "data", "9pa81bfc-b5f4-5ba2-b81a-b464248f02d2", "problem_1"]}' -C $CHANNEL_NAME
+"algo", "0pa81bfc-b5f4-5ba2-b81a-b464248f02d2", "problem_1", "topalgo"]}' -C $CHANNEL_NAME
+peer chaincode invoke -o orderer.morpheo.co:7050 --tls true --cafile $ORDERER_CA -n mycc -c '{"Args":["registerItem", "data", "9pa81bfc-b5f4-5ba2-b81a-b464248f02d2", "problem_1", "psg"]}' -C $CHANNEL_NAME
 ```
 
 ### + `registerProblem`: to register a new problem

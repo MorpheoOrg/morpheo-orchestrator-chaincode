@@ -12,6 +12,7 @@
 
 # Build
 chaincode
+orchestrator
 
 # Fabric
 chaincode-docker-devmode/myc.block

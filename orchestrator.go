@@ -58,6 +58,7 @@ type SmartContract struct {
 // ObjectType belongs to algo, data
 type Item struct {
 	ObjectType string `json:"docType"`
+	Name       string `json:"name"`
 	Problem    string `json:"problem"`
 }
 
@@ -155,8 +156,8 @@ func (s *SmartContract) initLedger(APIstub shim.ChaincodeStubInterface) sc.Respo
 	// Adding algorithms
 	// TODO merge the 2 subsection paragraphs
 	algos := []Item{
-		Item{ObjectType: "algo", Problem: "problem_1"},
-		Item{ObjectType: "algo", Problem: "problem_1"},
+		Item{ObjectType: "algo", Problem: "problem_1", Name: "test1"},
+		Item{ObjectType: "algo", Problem: "problem_1", Name: "test2"},
 	}
 
 	for i := 0; i < len(algos); i++ {
@@ -177,11 +178,11 @@ func (s *SmartContract) initLedger(APIstub shim.ChaincodeStubInterface) sc.Respo
 
 	// Adding data
 	datas := []Item{
-		Item{ObjectType: "data", Problem: "problem_0"},
-		Item{ObjectType: "data", Problem: "problem_0"},
-		Item{ObjectType: "data", Problem: "problem_1"},
-		Item{ObjectType: "data", Problem: "problem_1"},
-		Item{ObjectType: "data", Problem: "problem_1"},
+		Item{ObjectType: "data", Problem: "problem_0", Name: ""},
+		Item{ObjectType: "data", Problem: "problem_0", Name: ""},
+		Item{ObjectType: "data", Problem: "problem_1", Name: ""},
+		Item{ObjectType: "data", Problem: "problem_1", Name: ""},
+		Item{ObjectType: "data", Problem: "problem_1", Name: ""},
 	}
 	for i := 0; i < len(datas); i++ {
 		dataAsBytes, _ := json.Marshal(datas[i])
@@ -266,7 +267,7 @@ func registerTestData(APIstub shim.ChaincodeStubInterface, problemKey string,
 		// create data key
 		dataKey := "data_" + sdata
 		// store data
-		err, _ = storeItem(APIstub, dataKey, "data", problemKey)
+		err, _ = storeItem(APIstub, dataKey, "data", problemKey, "")
 		if err != nil {
 			return err, testData
 		}
@@ -282,11 +283,11 @@ func registerTestData(APIstub shim.ChaincodeStubInterface, problemKey string,
 // ================================================================================
 
 func storeItem(APIstub shim.ChaincodeStubInterface, itemKey string, itemType string,
-	problem string) (err error, item Item) {
+	problem string, name string) (err error, item Item) {
 	// Store item in the ledger and create associated composite key
 	// No learnuplet creation
 
-	item = Item{ObjectType: itemType, Problem: problem}
+	item = Item{ObjectType: itemType, Problem: problem, Name: name}
 
 	itemAsBytes, err := json.Marshal(item)
 	if err != nil {
@@ -319,18 +320,18 @@ func (s *SmartContract) registerItem(APIstub shim.ChaincodeStubInterface, args [
 	// store item in the ledger and create associated learnuplet
 	// ---------------------------------------------------------------
 
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return shim.Error("Incorrect number of arguments. Expecting 3: itemType, storage_address, problem")
 	}
-	//   0          	1   		 	2
-	// "itemType", "storage_address", "problem"
+	//   0          	1   		 	2			3
+	// "itemType", "storage_address", "problem", "name"
 
 	fmt.Println("- start create " + args[0])
 
 	// Create item key
 	itemKey := args[0] + "_" + args[1]
 	// Store item in ledger and create composite key
-	err, item := storeItem(APIstub, itemKey, args[0], args[2])
+	err, item := storeItem(APIstub, itemKey, args[0], args[2], args[3])
 	if err != nil {
 		return shim.Error(err.Error())
 	}
