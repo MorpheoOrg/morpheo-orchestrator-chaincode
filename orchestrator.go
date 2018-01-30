@@ -91,8 +91,8 @@ type Learnuplet struct {
 	ObjectType        string             `json:"docType"`
 	Problem           map[string]string  `json:"problem"`
 	Algo              map[string]string  `json:"algo"`
-	ModelStartAddress string             `json:"modelStart"`
-	ModelEndAddress   string             `json:"modelEnd"`
+	ModelStartAddress string             `json:"modelStartAddress"`
+	ModelEndAddress   string             `json:"modelEndAddress"`
 	TrainData         map[string]string  `json:"trainData"`
 	TestData          map[string]string  `json:"testData"`
 	Worker            string             `json:"worker"`
@@ -340,8 +340,6 @@ func (s *SmartContract) registerItem(APIstub shim.ChaincodeStubInterface, args [
 	if len(args) != 4 {
 		return shim.Error("Incorrect number of arguments. Expecting 3: itemType, storage_address, problem")
 	}
-	//   0          	1   		 	2			3
-	// "itemType", "storage_address", "problem", "name"
 
 	fmt.Println("- start create " + args[0])
 
