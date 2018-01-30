@@ -34,10 +34,6 @@ Copyright Morpheo Org. 2017
 
 package main
 
-/* Imports
- * 4 utility libraries for formatting, handling bytes, reading and writing JSON, and string manipulation
- * 2 specific Hyperledger Fabric specific libraries for Smart Contracts
- */
 import (
 	"encoding/json"
 	"fmt"
@@ -107,6 +103,16 @@ type Learnuplet struct {
 	TestPerf          map[string]float64 `json:"testPerf"`
 }
 
+// ErrorUplet structure
+type errorUplet struct {
+	number int
+	what   string
+}
+
+func (e *errorUplet) Error() string {
+	return fmt.Sprintf("%d - %s", e.number, e.what)
+}
+
 // Init method is called when the Smart Contract orchestrator is instantiated by the blockchain network
 // Note that chaincode upgrade also calls this function to reset
 // or to migrate data, so be careful to avoid a scenario where you
@@ -124,10 +130,10 @@ func (s *SmartContract) Invoke(APIstub shim.ChaincodeStubInterface) sc.Response 
 	// Retrieve the requested Smart Contract function and arguments
 	function, args := APIstub.GetFunctionAndParameters()
 	// Route to the appropriate handler function to interact with the ledger appropriately
-	if function == "queryItem" {
-		return s.queryItem(APIstub, args)
-	} else if function == "queryItems" {
-		return s.queryItems(APIstub, args)
+	if function == "queryObject" {
+		return s.queryObject(APIstub, args)
+	} else if function == "queryObjects" {
+		return s.queryObjects(APIstub, args)
 	} else if function == "queryProblemItems" {
 		return s.queryProblemItems(APIstub, args)
 	} else if function == "registerItem" {
@@ -160,8 +166,8 @@ func (s *SmartContract) initLedger(APIstub shim.ChaincodeStubInterface) sc.Respo
 
 	// Adding two problems
 	problems := []Problem{
-		Problem{ObjectType: "problem", StorageAddress: "2pa81bfc-b5f4-4ba2-b81a-b464248f02d1", SizeTrainDataset: 1, TestData: [1]string{"data_0"}},
-		Problem{ObjectType: "problem", StorageAddress: "4za81bfc-b5f4-4ba2-b81a-b464248f02d1", SizeTrainDataset: 2, TestData: [1]string{"data_0"}},
+		Problem{ObjectType: "problem", StorageAddress: "2pa81bfc-b5f4-4ba2-b81a-b464248f02d1", SizeTrainDataset: 1, TestData: []string{"data_0"}},
+		Problem{ObjectType: "problem", StorageAddress: "4za81bfc-b5f4-4ba2-b81a-b464248f02d1", SizeTrainDataset: 2, TestData: []string{"data_0"}},
 	}
 	for i, problem := range problems {
 		problemAsBytes, _ := json.Marshal(problem)
@@ -253,9 +259,6 @@ func (s *SmartContract) registerProblem(APIstub shim.ChaincodeStubInterface, arg
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	for i, td := range testData {
-		testData[i] = "data_" + td
-	}
 
 	// Store Problem
 	var problem = Problem{ObjectType: "problem", StorageAddress: args[0], SizeTrainDataset: sizeTrainDataset, TestData: testData}
@@ -286,7 +289,7 @@ func registerTestData(APIstub shim.ChaincodeStubInterface, problemKey string,
 		if err != nil {
 			return testData, err
 		}
-		testData = append(testData, sdata)
+		testData = append(testData, dataKey)
 		fmt.Printf("-- test data %s registered \n", dataKey)
 	}
 
@@ -298,7 +301,6 @@ func registerTestData(APIstub shim.ChaincodeStubInterface, problemKey string,
 // ===================================================================================
 
 // storeItem stores an item (data or algo) in the chaincode
-// TODO: add doc on arguments?
 func storeItem(APIstub shim.ChaincodeStubInterface, itemKey string, itemType string,
 	storageAddress string, problem string, name string) (item Item, err error) {
 
@@ -388,7 +390,7 @@ func (s *SmartContract) queryObject(APIstub shim.ChaincodeStubInterface, args []
 
 // queryObjects is a smart contract to query all objects of a object type
 // Arg (1 string): object type
-func (s *SmartContract) queryItems(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
+func (s *SmartContract) queryObjects(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
 
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting 1: object type")
@@ -427,10 +429,9 @@ func (s *SmartContract) queryItems(APIstub shim.ChaincodeStubInterface, args []s
 // ================================================================================
 
 // getProblemItems is a function to get all items keys (data or algo) related to a problem
-// TODO: add details on args?
 func getProblemItems(APIstub shim.ChaincodeStubInterface, problemKey string, itemType string) (itemKeys []string, err error) {
 
-	fmt.Printf("--- looking for %s associated with %s \n", itemType, problem)
+	fmt.Printf("--- looking for %s associated with %s \n", itemType, problemKey)
 
 	// Query the itemType~problem~key index by problem
 	// This will execute a key range query on all keys starting with 'itemType~problem'
@@ -599,15 +600,16 @@ func (s *SmartContract) queryAlgoLearnuplet(APIstub shim.ChaincodeStubInterface,
 // ====================================================================
 
 // getRankAlgoLearnuplet is a function to get the last defined rank of the learnuplets
-// associated to an algo, and the address of the associated trained model
-// TODO add args doc?
-func getRankAlgoLearnuplet(APIstub shim.ChaincodeStubInterface, algoKey string) (rank int, modelAddress string) {
+// associated to an algo, the algo address, and the address of the associated trained model
+func getRankAlgoLearnuplet(APIstub shim.ChaincodeStubInterface, algoKey string) (rank int, algoAddress string, modelAddress string, err error) {
 	fmt.Printf("--- looking for last learnuplet rank of %s \n", algoKey)
 
+	modelAddress = ""
+	algoAddress = ""
 	// Query the learnuplet~algo~key index by algo
 	algoAssociatedLearnupletIterator, err := APIstub.GetStateByPartialCompositeKey("learnuplet~algo~key", []string{"learnuplet", algoKey})
 	if err != nil {
-		return -1, ""
+		return -1, algoAddress, modelAddress, err
 	}
 	defer algoAssociatedLearnupletIterator.Close()
 
@@ -615,17 +617,16 @@ func getRankAlgoLearnuplet(APIstub shim.ChaincodeStubInterface, algoKey string) 
 	var newRank int
 	var perf, newPerf float64
 	rank = 0
-	modelAddress = ""
 	for i := 0; algoAssociatedLearnupletIterator.HasNext(); i++ {
 		responseRange, err := algoAssociatedLearnupletIterator.Next()
 		if err != nil {
-			return -1, ""
+			return -1, algoAddress, modelAddress, err
 		}
 
 		// get the itemType, problem, and key from the composite key
 		_, compositeKeyParts, err := APIstub.SplitCompositeKey(responseRange.Key)
 		if err != nil {
-			return -1, ""
+			return -1, algoAddress, modelAddress, err
 		}
 		returnedKey := compositeKeyParts[2]
 		value, _ := APIstub.GetState(returnedKey)
@@ -633,17 +634,18 @@ func getRankAlgoLearnuplet(APIstub shim.ChaincodeStubInterface, algoKey string) 
 		err = json.Unmarshal(value, &retrievedLearnuplet)
 		if err != nil {
 			fmt.Errorf("Problem Unmarshal %s", returnedKey)
-			return -1, ""
+			return -1, algoAddress, modelAddress, err
 		}
 		if i == 0 {
 			perf = retrievedLearnuplet.Perf
+			algoAddress = retrievedLearnuplet.Algo[algoKey]
 		}
 		newRank = retrievedLearnuplet.Rank
 		newPerf = retrievedLearnuplet.Perf
 		// If better perf, update modelAddess
 		if retrievedLearnuplet.Status == "done" && newPerf >= perf {
 			perf = newPerf
-			modelAddress = retrievedLearnuplet.ModelEnd
+			modelAddress = retrievedLearnuplet.ModelEndAddress
 		}
 		// If greater rank, update rank
 		if newRank >= rank {
@@ -656,12 +658,12 @@ func getRankAlgoLearnuplet(APIstub shim.ChaincodeStubInterface, algoKey string) 
 		fmt.Printf("- for algo %s: found last rank %s and associated model %s \n", algoKey, rank, modelAddress)
 	}
 
-	return rank, modelAddress
+	return rank, algoAddress, modelAddress, nil
 }
 
 // getDataAddress is a function to get data addresses on Storage given their keys
-// TODO Add doc about args?
 func getDataAddress(APIstub shim.ChaincodeStubInterface, data []string) (dataAddresses map[string]string, err error) {
+	dataAddresses = make(map[string]string)
 	for _, idata := range data {
 		value, err := APIstub.GetState(idata)
 		if err != nil {
@@ -681,13 +683,13 @@ func getDataAddress(APIstub shim.ChaincodeStubInterface, data []string) (dataAdd
 
 // createLearnuplet is a function to create learnuplets given a set of train data, an algo,
 // and parameter of the training related to the problem
-// TODO Add doc about args?
 func createLearnuplet(
 	APIstub shim.ChaincodeStubInterface, trainData []string, szBatch int,
 	testData []string, problem string, problemAddress string, algo string,
-	modelStartAddress string, startRank int) (nbNewLearnuplet int) {
+	algoAddress string, modelStartAddress string, startRank int) (err error) {
 
-	nbNewLearnuplet = 0
+	err = nil
+	nbFailLearnuplet := 0
 	var batchData []string
 	// create empty maps for performances
 	var trainPerf, testPerf map[string]float64
@@ -715,67 +717,71 @@ func createLearnuplet(
 		mapBatchData, _ := getDataAddress(APIstub, batchData)
 		// Learnuplet definition
 		newLearnuplet := Learnuplet{
-			ObjectType:     "learnuplet",
-			Problem:        problem,
-			ProblemAddress: problemAddress,
-			Algo:           algo,
-			ModelStart:     learnupletModelStartAddress,
-			ModelEnd:       modelEndAddress,
-			TrainData:      mapBatchData,
-			TestData:       mapTestData,
-			Worker:         "",
-			Status:         "todo",
-			Rank:           j,
-			Perf:           0,
-			TrainPerf:      trainPerf,
-			TestPerf:       testPerf,
+			ObjectType:        "learnuplet",
+			Problem:           map[string]string{problem: problemAddress},
+			Algo:              map[string]string{algo: algoAddress},
+			ModelStartAddress: learnupletModelStartAddress,
+			ModelEndAddress:   modelEndAddress,
+			TrainData:         mapBatchData,
+			TestData:          mapTestData,
+			Worker:            "",
+			Status:            "todo",
+			Rank:              j,
+			Perf:              0,
+			TrainPerf:         trainPerf,
+			TestPerf:          testPerf,
 		}
 		// Append to ledger
 		learnupletKey := "learnuplet_" + uuid.NewV4().String()
-		newLearnupletAsBytes, err := json.Marshal(newLearnuplet)
-		if err != nil {
+		newLearnupletAsBytes, errL := json.Marshal(newLearnuplet)
+		if errL != nil {
 			fmt.Errorf("Problem marshaling ", learnupletKey)
+			nbFailLearnuplet++
+			continue
 		}
 		err = APIstub.PutState(learnupletKey, newLearnupletAsBytes)
-		if err != nil {
+		if errL != nil {
 			fmt.Errorf("Problem putting state of ", learnupletKey)
-		} else {
-			nbNewLearnuplet++
-			// Create composite key learnuplet~algo~key
-			indexName := "learnuplet~algo~key"
-			learnupletAlgoIndexKey, _ := APIstub.CreateCompositeKey(indexName, []string{"learnuplet", algo, learnupletKey})
-			value := []byte{0x00}
-			APIstub.PutState(learnupletAlgoIndexKey, value)
-			// Create composite key learnuplet~status~key
-			indexName = "learnuplet~status~key"
-			learnupletStatusIndexKey, _ := APIstub.CreateCompositeKey(indexName, []string{"learnuplet", "todo", learnupletKey})
-			APIstub.PutState(learnupletStatusIndexKey, value)
-			fmt.Printf("-- creation of %s ok \n", learnupletKey)
-
+			nbFailLearnuplet++
+			continue
 		}
+		// Create composite key learnuplet~algo~key
+		indexName := "learnuplet~algo~key"
+		learnupletAlgoIndexKey, _ := APIstub.CreateCompositeKey(indexName, []string{"learnuplet", algo, learnupletKey})
+		value := []byte{0x00}
+		APIstub.PutState(learnupletAlgoIndexKey, value)
+		// Create composite key learnuplet~status~key
+		indexName = "learnuplet~status~key"
+		learnupletStatusIndexKey, _ := APIstub.CreateCompositeKey(indexName, []string{"learnuplet", "todo", learnupletKey})
+		APIstub.PutState(learnupletStatusIndexKey, value)
+		fmt.Printf("-- creation of %s ok \n", learnupletKey)
+
 	}
 
-	return nbNewLearnuplet
+	if nbFailLearnuplet > 0 {
+		err = &errorUplet{nbFailLearnuplet, "failure in learnuplet creation"}
+	}
+	return err
 }
 
 // algoLearnuplet is a function to create learnuplet when new algo is registered.
 // It calls the function createLearnuplet
-// TODO add doc about args? return error?
-func algoLearnuplet(APIstub shim.ChaincodeStubInterface, algoKey string, algo Item) int {
+func algoLearnuplet(APIstub shim.ChaincodeStubInterface, algoKey string, algo Item) error {
 
 	problem := algo.Problem
+	algoAddress := algo.StorageAddress
 
 	// Find test data
 	value, err := APIstub.GetState(problem)
 	if err != nil {
 		fmt.Errorf("%s not found", problem)
-		return 0
+		return err
 	}
 	retrievedProblem := Problem{}
 	err = json.Unmarshal(value, &retrievedProblem)
 	if err != nil {
 		fmt.Errorf("Problem Unmarshal %s", problem)
-		return 0
+		return err
 	}
 	testData := retrievedProblem.TestData
 	sizeTrainDataset := retrievedProblem.SizeTrainDataset
@@ -795,47 +801,56 @@ func algoLearnuplet(APIstub shim.ChaincodeStubInterface, algoKey string, algo It
 	sort.Strings(trainData)
 	// Create learnuplets
 	modelStartAddress := algo.StorageAddress
-	nbNewLearnuplet := createLearnuplet(
+	err = createLearnuplet(
 		APIstub, trainData, sizeTrainDataset, testData, problem, problemAddress,
-		algoKey, modelStart, 0)
-	return nbNewLearnuplet
+		algoKey, algoAddress, modelStartAddress, 0)
+	return err
 }
 
 // dataLearnuplet is a function to create learnuplet when new data is registered
 // It calls the function createLearnuplet
-// TODO add doc about args? return error?
-func dataLearnuplet(APIstub shim.ChaincodeStubInterface, data []string, problem string) int {
+func dataLearnuplet(APIstub shim.ChaincodeStubInterface, data []string, problem string) (err error) {
 
-	nbNewLearnuplet := 0
+	nbFailLearnuplet := 0
+	err = nil
 
 	// Find test data
 	value, err := APIstub.GetState(problem)
 	if err != nil {
 		fmt.Errorf("%s not found", problem)
-		return 0
+		return err
 	}
 	retrievedProblem := Problem{}
 	err = json.Unmarshal(value, &retrievedProblem)
 	if err != nil {
 		fmt.Errorf("Problem Unmarshal %s", problem)
-		return 0
+		return err
 	}
-	testData := retrievedProblem.TestDataset
+	testData := retrievedProblem.TestData
 	sizeTrainDataset := retrievedProblem.SizeTrainDataset
 	problemAddress := retrievedProblem.StorageAddress
 	// Find all active algo associated to the same problem
 	algoKeys, _ := getProblemItems(APIstub, problem, "algo")
 	// For each algo, find the last rank and create learnuplet
 	var rank int
-	var modelAddress string
+	var algoAddress, modelAddress string
 	for _, algoKey := range algoKeys {
-		rank, modelAddress = getRankAlgoLearnuplet(APIstub, algoKey)
-		nbAlgoNewLearnuplet := createLearnuplet(
+		rank, algoAddress, modelAddress, err = getRankAlgoLearnuplet(APIstub, algoKey)
+		if err != nil {
+			nbFailLearnuplet = nbFailLearnuplet + err.(*errorUplet).number
+			continue
+		}
+		err = createLearnuplet(
 			APIstub, data, sizeTrainDataset, testData, problem, problemAddress,
-			algoKey, modelAddress, rank+1)
-		nbNewLearnuplet = nbNewLearnuplet + nbAlgoNewLearnuplet
+			algoKey, algoAddress, modelAddress, rank+1)
+		if err != nil {
+			nbFailLearnuplet = nbFailLearnuplet + err.(*errorUplet).number
+		}
 	}
-	return nbNewLearnuplet
+	if nbFailLearnuplet > 0 {
+		err = &errorUplet{nbFailLearnuplet, "failure in learnuplet creation"}
+	}
+	return err
 }
 
 // ================================================================================
@@ -890,13 +905,13 @@ func (s *SmartContract) setUpletWorker(APIstub shim.ChaincodeStubInterface, args
 }
 
 // reportLearn is a smart contract to set output of a learnuplet, updating the corresponding learnuplet.
-// Args (5 strings): "upletKey", "status", "perf", "trainPerf" (train_data_i perf_i, train_data_j perf_j, ...),
-// "testPerf" (test_data_i perf_j, test_data_j perf_j, ...).
+// Args (5 strings): "upletKey", "status", "perf", "trainPerf" ("{\"train_data_i\": perf_i, \"train_data_j\": perf_j, ...}"),
+// "testPerf" ("{\"test_data_i\": perf_j, \"test_data_j\": perf_j, ...}").
 // As for many other functions, this is for now a simple function, much more checks will be applied later...
 func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
 
 	if len(args) != 5 {
-		return shim.Error("Incorrect number of arguments. Expecting 5: uplet_key, status (failed / done), perf, train_perf (train_data_i perf_i, train_data_j perf_j, ...), test_perf (test_data_i perf_j, test_data_j perf_j, ...)")
+		return shim.Error("Incorrect number of arguments. Expecting 5: uplet_key, status (failed / done), perf, train_perf ({\"train_data_i\": perf_i, \"train_data_j\": perf_j, ...}), test_perf ({\"train_data_i\": perf_i, \"train_data_j\": perf_j, ...}")
 	}
 
 	upletKey := args[0]
@@ -944,10 +959,13 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 			return shim.Error("Error parsing performance - " + err.Error())
 		}
 		// TODO check data addresses correspond to train and test data
+		fmt.Printf("before train")
+		fmt.Println(args[3])
 		err = json.Unmarshal([]byte(args[3]), &trainPerf)
 		if err != nil {
 			return shim.Error("Error un-marshalling train perf - " + err.Error())
 		}
+		fmt.Printf("before train")
 		err = json.Unmarshal([]byte(args[4]), &testPerf)
 		if err != nil {
 			return shim.Error("Error un-marshalling test perf - " + err.Error())
@@ -978,14 +996,18 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 	APIstub.PutState(learnupletStatusIndexKey, emptyValue)
 
 	// Update model start of learnuplet of next rank
-	_, algoLearnuplet, err := getCompositeLearnuplet(APIstub, "algo", retrievedLearnuplet.Algo)
+	var algoKey string
+	for k := range retrievedLearnuplet.Algo {
+		algoKey = k
+	}
+	_, algoLearnuplet, err := getCompositeLearnuplet(APIstub, "algo", algoKey)
 	if err != nil {
 		return shim.Error("Problem getting learnuplets of same algo - " + err.Error())
 	}
 	if len(algoLearnuplet) > 1 {
 		var nextLearnupletKey string
 		bestPerf := perf
-		newModelStart := retrievedLearnuplet.ModelEnd
+		newModelStart := retrievedLearnuplet.ModelEndAddress
 		for _, learnuplet := range algoLearnuplet {
 			// Type conversion
 			// TOFIX: bad practice here
@@ -1009,7 +1031,7 @@ func (s *SmartContract) reportLearn(APIstub shim.ChaincodeStubInterface, args []
 		if err != nil {
 			return shim.Error(fmt.Sprintf("Error Unmarshal next uplet - %s", err))
 		}
-		nextUplet.ModelStart = newModelStart
+		nextUplet.ModelStartAddress = newModelStart
 
 		// Store updated learnuplet
 		nextUpletAsBytes, err := json.Marshal(nextUplet)
