@@ -166,8 +166,8 @@ func (s *SmartContract) initLedger(APIstub shim.ChaincodeStubInterface) sc.Respo
 
 	// Adding two problems
 	problems := []Problem{
-		Problem{ObjectType: "problem", StorageAddress: "2pa81bfc-b5f4-4ba2-b81a-b464248f02d1", SizeTrainDataset: 1, TestData: []string{"data_0"}},
-		Problem{ObjectType: "problem", StorageAddress: "4za81bfc-b5f4-4ba2-b81a-b464248f02d1", SizeTrainDataset: 2, TestData: []string{"data_0"}},
+		Problem{ObjectType: "problem", StorageAddress: "97d10b05-d37f-4b8e-b701-9ebe93fd2161", SizeTrainDataset: 1, TestData: []string{"data_0"}},
+		Problem{ObjectType: "problem", StorageAddress: "3fbfe8d5-bfa9-4924-90e2-b11a89faf735", SizeTrainDataset: 2, TestData: []string{"data_0"}},
 	}
 	for i, problem := range problems {
 		problemAsBytes, _ := json.Marshal(problem)
